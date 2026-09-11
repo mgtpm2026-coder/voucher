@@ -11,105 +11,62 @@
 
 <div class="row g-3 mb-4">
   {% for title,val,cls,icon in [('Total Claimed',summary.claims,'acc-navy','bi-receipt'),('Total Paid',summary.paid,'acc-green','bi-cash-coin'),('Outstanding',summary.balance,'acc-warning','bi-hourglass-split')] %}
-  <div class="col-md-4"><div class="stat-card {{cls}}"><div class="icon-chip"><i class="bi {{icon}}"></i></div><div class="label">{{title}}</div><div class="value">₹{{ val|rupees }}</div></div></div>
+  <div class="col-md-4"><div class="stat-card {{cls}}"><div class="icon-chip"><i class="bi {{icon}}"></i></div><div class="label">{{title}}</div><div class="value">₹{{'{:,.2f}'.format(val)}}</div></div></div>
   {% endfor %}
   <div class="col-6 col-md-3"><div class="stat-card acc-warning"><div class="icon-chip"><i class="bi bi-clock-history"></i></div><div class="label">Pending</div><div class="value">{{summary.pending}}</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card acc-green"><div class="icon-chip"><i class="bi bi-check2-circle"></i></div><div class="label">Approved</div><div class="value">{{summary.approved}}</div></div></div>
   <div class="col-6 col-md-3"><div class="stat-card acc-danger"><div class="icon-chip"><i class="bi bi-x-circle"></i></div><div class="label">Rejected</div><div class="value">{{summary.rejected}}</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card acc-navy"><div class="icon-chip"><i class="bi bi-journal-text"></i></div><div class="label">Vouchers</div><div class="value">{{summary.count}}</div></div></div>
 </div>
 
 <form class="filter-card mb-4">
   <div class="row g-3 align-items-end">
-    <div class="col-md-3"><label class="form-label" for="f-status">Approval Status</label><select id="f-status" name="status" class="form-select"><option value="">All</option>{% for s in ['Pending','Approved','Rejected'] %}<option {% if filters.status==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select></div>
-    <div class="col-md-3"><label class="form-label" for="f-emp">Employee</label><select id="f-emp" name="employee_id" class="form-select"><option value="">All employees</option>{% for e in employees %}<option value="{{e.id}}" {% if filters.employee_id|string==e.id|string %}selected{% endif %}>{{e.full_name}}</option>{% endfor %}</select></div>
-    <div class="col-md-3"><label class="form-label" for="f-month">Month</label><input id="f-month" type="month" name="month" value="{{filters.month}}" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label">Approval Status</label><select name="status" class="form-select"><option value="">All</option>{% for s in ['Pending','Approved','Rejected'] %}<option {% if filters.status==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label">Employee</label><select name="employee_id" class="form-select"><option value="">All employees</option>{% for e in employees %}<option value="{{e.id}}" {% if filters.employee_id|string==e.id|string %}selected{% endif %}>{{e.full_name}}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label">Month</label><input type="month" name="month" value="{{filters.month}}" class="form-control"></div>
     <div class="col-md-3"><button class="btn btn-brand w-100"><i class="bi bi-funnel"></i> Apply Filters</button></div>
   </div>
 </form>
 
 <div class="table-card">
-  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-    <thead><tr><th>Voucher</th><th>Employee</th><th>Date</th><th>Claim</th><th>Paid</th><th>Balance</th><th>Bill</th><th>Payment</th><th>Approval</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for v in vouchers %}
-    <tr>
-      <td class="fw-semibold">{{v.voucher_no}}</td>
-      <td>{{v.employee_name}}</td>
-      <td>{{v.date}}</td>
-      <td>₹{{ v.amount|rupees }}</td>
-      <td>₹{{ v.paid_amount|rupees }}</td>
-      <td class="{{ 'text-danger fw-semibold' if v.overpaid }}">₹{{ v.balance|rupees }}{% if v.overpaid %} <i class="bi bi-exclamation-triangle" title="Overpaid"></i>{% endif %}</td>
-      <td>
-        {% if v.receipt %}<a class="btn btn-sm btn-ghost" href="{{url_for('voucher_receipt',voucher_id=v.id)}}" target="_blank" rel="noopener" title="View the attached bill"><i class="bi bi-paperclip"></i> View</a>
-        {% else %}<span class="text-secondary small">—</span>{% endif %}
-      </td>
-      <td><span class="badge status-{{v.payment_status|replace(' ','-')|lower}}">{{v.payment_status}}</span></td>
-      <td><span class="badge approval-{{v.status|lower}}">{{v.status}}</span>{% if v.reject_reason %}<div class="small text-danger mt-1">{{v.reject_reason}}</div>{% endif %}</td>
-      <td class="actions">
-        <a class="btn btn-sm btn-brand-outline" href="{{url_for('voucher_pdf',voucher_id=v.id)}}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
-        <a class="btn btn-sm btn-ghost" href="{{url_for('payment_history',voucher_id=v.id)}}"><i class="bi bi-clock-history"></i> History</a>
-        {% if v.status=='Pending' %}
-        <form method="post" action="{{url_for('approve',voucher_id=v.id)}}" class="d-inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn-sm btn-accent"><i class="bi bi-check2-circle"></i> Approve</button>
-        </form>
-        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#reject{{v.id}}"><i class="bi bi-x-circle"></i> Reject</button>
-        {% endif %}
-        {% if v.status=='Approved' and v.balance>0 %}<button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#pay{{v.id}}"><i class="bi bi-cash-coin"></i> Record Payment</button>{% endif %}
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="10" class="text-center text-secondary py-4">No vouchers match these filters.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table></div>
-</div>
-
-{% if pages > 1 %}
-<nav class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-  <div class="text-secondary small">Page {{page}} of {{pages}} · {{filtered_total}} voucher{{ '' if filtered_total==1 else 's' }}</div>
-  <ul class="pagination mb-0">
-    <li class="page-item {{ 'disabled' if page<=1 }}"><a class="page-link" href="{{ url_for('manager_dashboard', page=page-1, **filters) }}">Previous</a></li>
-    <li class="page-item {{ 'disabled' if page>=pages }}"><a class="page-link" href="{{ url_for('manager_dashboard', page=page+1, **filters) }}">Next</a></li>
-  </ul>
-</nav>
-{% endif %}
-{% endblock %}
-
-{% block modals %}
-{# Modals live outside the table. As direct children of <tbody> the browser
-   hoisted them out during parsing, which is invalid HTML and fragile. #}
-{% for v in vouchers %}
-  {% if v.status=='Approved' and v.balance>0 %}
-  <div class="modal fade" id="pay{{v.id}}" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form method="post" enctype="multipart/form-data" action="{{url_for('record_payment',voucher_id=v.id)}}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="modal-header"><h5 class="modal-title"><i class="bi bi-cash-coin me-2"></i>Record Payment · {{v.voucher_no}}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Voucher</th><th>Employee</th><th>Date</th><th>Claim</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Approval</th><th>Actions</th></tr></thead><tbody>
+  {% for v in vouchers %}
+  <tr>
+    <td class="fw-semibold">{{v.voucher_no}}</td>
+    <td>{{v.employee_name}}</td>
+    <td>{{v.date}}</td>
+    <td>₹{{'{:,.2f}'.format(v.amount)}}</td>
+    <td>₹{{'{:,.2f}'.format(v.paid_amount)}}</td>
+    <td>₹{{'{:,.2f}'.format(v.balance)}}</td>
+    <td><span class="badge status-{{v.payment_status|replace(' ','-')|lower}}">{{v.payment_status}}</span></td>
+    <td><span class="badge approval-{{v.status|lower}}">{{v.status}}</span>{% if v.reject_reason %}<div class="small text-danger mt-1">{{v.reject_reason}}</div>{% endif %}</td>
+    <td class="actions">
+      <a class="btn btn-sm btn-brand-outline" href="{{url_for('voucher_pdf',voucher_id=v.id)}}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+      <a class="btn btn-sm btn-ghost" href="{{url_for('payment_history',voucher_id=v.id)}}"><i class="bi bi-clock-history"></i> History</a>
+      {% if v.status=='Pending' %}
+      <form method="post" action="{{url_for('approve',voucher_id=v.id)}}" class="d-inline"><button class="btn btn-sm btn-accent"><i class="bi bi-check2-circle"></i> Approve</button></form>
+      <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#reject{{v.id}}"><i class="bi bi-x-circle"></i> Reject</button>
+      {% endif %}
+      {% if v.status=='Approved' and v.balance>0 %}<button class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#pay{{v.id}}"><i class="bi bi-cash-coin"></i> Record Payment</button>{% endif %}
+    </td>
+  </tr>
+  <div class="modal fade" id="pay{{v.id}}"><div class="modal-dialog"><div class="modal-content"><form method="post" enctype="multipart/form-data" action="{{url_for('record_payment',voucher_id=v.id)}}">
+    <div class="modal-header"><h5><i class="bi bi-cash-coin me-2"></i>Record Payment · {{v.voucher_no}}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
-      <div class="balance-note mb-3"><i class="bi bi-info-circle me-1"></i>Balance available: <b>₹{{ v.balance|rupees }}</b></div>
-      <label class="form-label" for="pay-amt-{{v.id}}">Amount</label>
-      <input id="pay-amt-{{v.id}}" name="amount" type="number" step="0.01" min="0.01" max="{{v.balance}}" class="form-control mb-3" required>
-      <label class="form-label" for="pay-type-{{v.id}}">Payment Type</label>
-      <select id="pay-type-{{v.id}}" name="payment_type" class="form-select mb-3" required>{% for p in payment_types %}<option>{{p}}</option>{% endfor %}</select>
-      <label class="form-label" for="pay-date-{{v.id}}">Payment Date</label>
-      <input id="pay-date-{{v.id}}" name="payment_date" type="date" class="form-control mb-3" required>
-      <label class="form-label" for="pay-ref-{{v.id}}">Reference No.</label>
-      <input id="pay-ref-{{v.id}}" name="reference_no" class="form-control mb-3">
-      <label class="form-label" for="pay-rem-{{v.id}}">Remarks</label>
-      <textarea id="pay-rem-{{v.id}}" name="remarks" class="form-control mb-3"></textarea>
-      <label class="form-label" for="pay-proof-{{v.id}}">Payment Proof</label>
-      <input id="pay-proof-{{v.id}}" name="proof" type="file" class="form-control" accept=".jpg,.jpeg,.png,.pdf,.webp">
+      <div class="balance-note mb-3"><i class="bi bi-info-circle me-1"></i>Balance available: <b>₹{{'{:,.2f}'.format(v.balance)}}</b></div>
+      <label class="form-label">Amount</label><input name="amount" type="number" step="0.01" min="0.01" max="{{v.balance}}" class="form-control mb-3" required>
+      <label class="form-label">Payment Type</label><select name="payment_type" class="form-select mb-3" required>{% for p in ['Cash','UPI','Bank Transfer','Cheque','Other'] %}<option>{{p}}</option>{% endfor %}</select>
+      <label class="form-label">Payment Date</label><input name="payment_date" type="date" class="form-control mb-3" required>
+      <label class="form-label">Reference No.</label><input name="reference_no" class="form-control mb-3">
+      <label class="form-label">Remarks</label><textarea name="remarks" class="form-control mb-3"></textarea>
+      <label class="form-label">Payment Proof</label><input name="proof" type="file" class="form-control" accept=".jpg,.jpeg,.png,.pdf,.webp">
     </div>
-    <div class="modal-footer"><button type="button" class="btn btn-ghost" data-bs-dismiss="modal" data-no-lock="1">Cancel</button><button class="btn btn-brand"><i class="bi bi-check2"></i> Save Payment</button></div>
+    <div class="modal-footer"><button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button><button class="btn btn-brand"><i class="bi bi-check2"></i> Save Payment</button></div>
   </form></div></div></div>
-  {% endif %}
-  {% if v.status=='Pending' %}
-  <div class="modal fade" id="reject{{v.id}}" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form method="post" action="{{url_for('reject',voucher_id=v.id)}}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="modal-header"><h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Reject {{v.voucher_no}}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-    <div class="modal-body"><label class="form-label" for="rej-{{v.id}}">Reason</label><textarea id="rej-{{v.id}}" name="reason" class="form-control" required maxlength="2000"></textarea></div>
-    <div class="modal-footer"><button type="button" class="btn btn-ghost" data-bs-dismiss="modal" data-no-lock="1">Cancel</button><button class="btn btn-danger">Reject Voucher</button></div>
+  <div class="modal fade" id="reject{{v.id}}"><div class="modal-dialog"><div class="modal-content"><form method="post" action="{{url_for('reject',voucher_id=v.id)}}">
+    <div class="modal-header"><h5><i class="bi bi-x-circle me-2"></i>Reject {{v.voucher_no}}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><label class="form-label">Reason</label><textarea name="reason" class="form-control" required></textarea></div>
+    <div class="modal-footer"><button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger">Reject Voucher</button></div>
   </form></div></div></div>
-  {% endif %}
-{% endfor %}
+  {% endfor %}
+  </tbody></table></div>
+</div>
 {% endblock %}
