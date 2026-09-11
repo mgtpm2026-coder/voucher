@@ -1,0 +1,42 @@
+# /etc/nginx/sites-available/voucher
+# TLS certificate:  sudo certbot --nginx -d vouchers.yourcompany.in
+
+server {
+    listen 80;
+    server_name vouchers.yourcompany.in;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name vouchers.yourcompany.in;
+
+    ssl_certificate     /etc/letsencrypt/live/vouchers.yourcompany.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/vouchers.yourcompany.in/privkey.pem;
+
+    # Must be at least MAX_UPLOAD_MB, or nginx rejects the bill before Flask
+    # sees it and the user gets a bare 413 with no explanation.
+    client_max_body_size 12m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy same-origin always;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    location /static/ {
+        alias /opt/voucher/static/;
+        expires 30d;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}
+# With this in place set TRUST_PROXY=1 in .env so rate limiting sees the
+# real client IP rather than 127.0.0.1 for everyone.

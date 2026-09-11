@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block title %}{{ title }} · MGT Vouchers{% endblock %}
+{% block content %}
+<div class="empty">
+  <div class="empty-icon"><i class="bi bi-exclamation-triangle"></i></div>
+  <div class="empty-title">{{ code }} · {{ title }}</div>
+  <div>{{ message }}</div>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-brand mt-3"><i class="bi bi-house me-1"></i>Back to dashboard</a>
+</div>
+{% endblock %}

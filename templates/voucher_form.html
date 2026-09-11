@@ -4,16 +4,19 @@
 <div class="page-head mt-3"><div><h2>{{ 'Edit Voucher · ' + voucher.voucher_no if voucher else 'Create Voucher' }}</h2><div class="text-secondary">{{ 'Update and resubmit this claim.' if voucher else 'Submit a new expense / reimbursement claim.' }}</div></div></div>
 
 <form method="post" enctype="multipart/form-data" class="section-card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <h5 class="form-section-title"><i class="bi bi-receipt me-2"></i>Voucher Details</h5>
   <div class="row g-3">
-    <div class="col-md-6"><label class="form-label">Payable To</label><input name="payable_to" class="form-control" placeholder="Vendor / person name" value="{{voucher.payable_to if voucher else ''}}"></div>
-    <div class="col-md-3"><label class="form-label">Date</label><input type="date" name="date" class="form-control" value="{{ (voucher.date|string)[:10] if voucher else request.form.get('date','') }}" required></div>
-    <div class="col-md-3"><label class="form-label">Amount</label><input type="number" step="0.01" min="0.01" name="amount" class="form-control" placeholder="0.00" value="{{voucher.amount if voucher else ''}}" required></div>
-    <div class="col-md-6"><label class="form-label">Purpose</label><input name="purpose" class="form-control" placeholder="e.g. Site travel" value="{{voucher.purpose if voucher else ''}}" required></div>
-    <div class="col-md-6"><label class="form-label">Expense Payment Mode</label><select name="expense_payment_mode" class="form-select"><option value="">Select</option>{% for m in ['Cash','UPI','Bank Transfer','Cheque','Other'] %}<option {% if voucher and voucher.expense_payment_mode==m %}selected{% endif %}>{{m}}</option>{% endfor %}</select></div>
-    <div class="col-12"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="4" placeholder="Add details about this expense" required>{{voucher.description if voucher else ''}}</textarea></div>
-    <div class="col-md-6"><label class="form-label">Transaction ID</label><input name="transaction_id" class="form-control" placeholder="Optional" value="{{voucher.transaction_id if voucher else ''}}"></div>
-    <div class="col-md-6"><label class="form-label">Bill / Receipt</label><input type="file" name="receipt" class="form-control" accept=".jpg,.jpeg,.png,.pdf,.webp">{% if voucher and voucher.receipt %}<div class="form-text"><i class="bi bi-paperclip"></i> A receipt is already attached — upload a new file only to replace it.</div>{% endif %}</div>
+    <div class="col-md-6"><label class="form-label" for="f-payable">Payable To</label><input id="f-payable" name="payable_to" class="form-control" placeholder="Vendor / person name" maxlength="150" value="{{voucher.payable_to or '' if voucher else ''}}"></div>
+    <div class="col-md-3"><label class="form-label" for="f-date">Date</label><input id="f-date" type="date" name="date" class="form-control" max="{{ today }}" value="{{ (voucher.date|string)[:10] if voucher else today }}" required></div>
+    <div class="col-md-3"><label class="form-label" for="f-amount">Amount</label><input id="f-amount" type="number" step="0.01" min="0.01" name="amount" class="form-control" placeholder="0.00" value="{{voucher.amount if voucher else ''}}" required></div>
+    <div class="col-md-6"><label class="form-label" for="f-purpose">Purpose</label><input id="f-purpose" name="purpose" class="form-control" placeholder="e.g. Site travel" maxlength="255" value="{{voucher.purpose if voucher else ''}}" required></div>
+    <div class="col-md-6"><label class="form-label" for="f-mode">Expense Payment Mode</label><select id="f-mode" name="expense_payment_mode" class="form-select"><option value="">Select</option>{% for m in ['Cash','UPI','Bank Transfer','Cheque','Other'] %}<option {% if voucher and voucher.expense_payment_mode==m %}selected{% endif %}>{{m}}</option>{% endfor %}</select></div>
+    <div class="col-12"><label class="form-label" for="f-desc">Description</label><textarea id="f-desc" name="description" class="form-control" rows="4" placeholder="Add details about this expense" maxlength="5000" required>{{voucher.description or '' if voucher else ''}}</textarea></div>
+    <div class="col-md-6"><label class="form-label" for="f-txn">Transaction ID</label><input id="f-txn" name="transaction_id" class="form-control" placeholder="Optional" maxlength="150" value="{{voucher.transaction_id or '' if voucher else ''}}"></div>
+    <div class="col-md-6"><label class="form-label" for="f-receipt">Bill / Receipt</label><input id="f-receipt" type="file" name="receipt" class="form-control" accept=".jpg,.jpeg,.png,.pdf,.webp">
+      {% if voucher and voucher.receipt %}<div class="form-text"><i class="bi bi-paperclip"></i> <a href="{{url_for('voucher_receipt',voucher_id=voucher.id)}}" target="_blank" rel="noopener">View current receipt</a> — upload a new file only to replace it.</div>{% endif %}
+    </div>
   </div>
   <div class="mt-4 d-flex gap-2">
     <button class="btn btn-brand"><i class="bi bi-check2-circle me-1"></i>{{ 'Save & Resubmit' if voucher else 'Submit Voucher' }}</button>

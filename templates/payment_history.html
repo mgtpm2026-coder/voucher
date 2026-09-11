@@ -2,24 +2,38 @@
 {% block content %}
 <a href="{{url_for('dashboard')}}" class="back-link"><i class="bi bi-arrow-left"></i> Dashboard</a>
 <div class="page-head mt-3">
-  <div><h2>{{voucher.voucher_no}}</h2><div class="text-secondary">{{voucher.employee_name}}</div></div>
-  <a class="btn btn-brand-outline" href="{{url_for('voucher_pdf',voucher_id=voucher.id)}}"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+  <div><h2>{{voucher.voucher_no}}</h2><div class="text-secondary">{{voucher.employee_name}} · {{voucher.purpose}}</div></div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if voucher.receipt %}<a class="btn btn-ghost" href="{{url_for('voucher_receipt',voucher_id=voucher.id)}}" target="_blank" rel="noopener"><i class="bi bi-paperclip"></i> View Bill</a>{% endif %}
+    <a class="btn btn-brand-outline" href="{{url_for('voucher_pdf',voucher_id=voucher.id)}}"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+  </div>
 </div>
 
 <div class="row g-3 mb-4">
-  <div class="col-md-4"><div class="stat-card acc-navy"><div class="icon-chip"><i class="bi bi-receipt"></i></div><div class="label">Claim</div><div class="value">₹{{'{:,.2f}'.format(voucher.amount)}}</div></div></div>
-  <div class="col-md-4"><div class="stat-card acc-green"><div class="icon-chip"><i class="bi bi-check2-circle"></i></div><div class="label">Paid</div><div class="value">₹{{'{:,.2f}'.format(voucher.paid_amount)}}</div></div></div>
-  <div class="col-md-4"><div class="stat-card acc-warning"><div class="icon-chip"><i class="bi bi-hourglass-split"></i></div><div class="label">Balance</div><div class="value">₹{{'{:,.2f}'.format(voucher.balance)}}</div></div></div>
+  <div class="col-md-4"><div class="stat-card acc-navy"><div class="icon-chip"><i class="bi bi-receipt"></i></div><div class="label">Claim</div><div class="value">₹{{ voucher.amount|rupees }}</div></div></div>
+  <div class="col-md-4"><div class="stat-card acc-green"><div class="icon-chip"><i class="bi bi-check2-circle"></i></div><div class="label">Paid</div><div class="value">₹{{ voucher.paid_amount|rupees }}</div></div></div>
+  <div class="col-md-4"><div class="stat-card acc-warning"><div class="icon-chip"><i class="bi bi-hourglass-split"></i></div><div class="label">Balance</div><div class="value">₹{{ voucher.balance|rupees }}</div></div></div>
 </div>
 
 <div class="surface-card p-4">
   <h5 class="form-section-title">Payment History</h5>
-  <div class="table-responsive"><table class="table"><thead><tr><th>Date</th><th>Amount</th><th>Type</th><th>Reference</th><th>Remarks</th></tr></thead><tbody>
-  {% for p in payments %}
-  <tr><td>{{p.payment_date}}</td><td>₹{{'{:,.2f}'.format(p.amount)}}</td><td>{{p.payment_type}}</td><td>{{p.reference_no or '-'}}</td><td>{{p.remarks or '-'}}</td></tr>
-  {% else %}
-  <tr><td colspan="5" class="text-center text-secondary py-4">No payments recorded.</td></tr>
-  {% endfor %}
-  </tbody></table></div>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Date</th><th>Amount</th><th>Type</th><th>Reference</th><th>Remarks</th><th>Recorded By</th><th>Proof</th></tr></thead>
+    <tbody>
+    {% for p in payments %}
+    <tr>
+      <td>{{p.payment_date}}</td>
+      <td>₹{{ p.amount|rupees }}</td>
+      <td>{{p.payment_type}}</td>
+      <td>{{p.reference_no or '-'}}</td>
+      <td>{{p.remarks or '-'}}</td>
+      <td class="small text-secondary">{{p.recorded_by or '-'}}</td>
+      <td>{% if p.proof_path %}<a class="btn btn-sm btn-ghost" href="{{url_for('payment_proof',payment_id=p.id)}}" target="_blank" rel="noopener"><i class="bi bi-paperclip"></i> View</a>{% else %}<span class="text-secondary small">—</span>{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-center text-secondary py-4">No payments recorded.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
 </div>
 {% endblock %}

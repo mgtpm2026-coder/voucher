@@ -1,71 +1,99 @@
+"""Bulk-create employee accounts from a CSV file.
+
+Replaces the old version of this script, which shipped a hardcoded
+"ChangeMe@123" for every account it created.
+
+Passwords are never written in this file. Each account gets a strong random
+password, printed once so you can hand it over, and every account is flagged
+must_change_password so the holder replaces it at first login.
+
+Usage:
+    python create_credentials.py employees.csv
+
+The CSV needs a header row with these columns (email and phone optional):
+
+    username,full_name,department,phone,email
+    priya,Priya Rao,Accounts,9876543210,priya@company.in
+    rahul,Rahul N,Site,9876543211,
+
+Existing usernames are skipped, so the script is safe to re-run.
 """
-Insert manager / employee login credentials directly.
 
-Edit the MANAGERS and EMPLOYEES lists below with the accounts you want,
-then run:
-
-    python create_credentials.py
-
-Requires the same .env used by app.py (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME).
-Passwords are hashed with werkzeug before being stored — never stored in plain text.
-Existing usernames are skipped (not overwritten) so it's safe to re-run.
-"""
-
+import csv
 import os
-import mysql.connector
+import secrets
+import string
+import sys
+
 from dotenv import load_dotenv
-from werkzeug.security import generate_password_hash
 
 load_dotenv()
 
-# ---- 1. Edit these accounts ------------------------------------------------
+import mysql.connector  # noqa: E402
+from werkzeug.security import generate_password_hash  # noqa: E402
 
-MANAGERS = [
-    # username, password, full_name, email
-    {"username": "admin", "password": "ChangeMe@123", "full_name": "MGT Manager", "email": ""},
-]
+ALPHABET = string.ascii_letters + string.digits + "!@#$%^&*-_"
 
-EMPLOYEES = [
-    # username, password, full_name, department, phone, email
-    {"username": "pratham", "password": "ChangeMe@123", "full_name": "Pratham Kumar",
-     "department": "Project Management", "phone": "", "email": ""},
-]
 
-# -----------------------------------------------------------------------------
+def random_password(length=14):
+    """Random password that always satisfies the app's complexity rule."""
+    while True:
+        pw = "".join(secrets.choice(ALPHABET) for _ in range(length))
+        if (any(c.islower() for c in pw) and any(c.isupper() for c in pw)
+                and any(c.isdigit() for c in pw)):
+            return pw
 
-conn = mysql.connector.connect(
-    host=os.getenv("DB_HOST", "localhost"),
-    port=int(os.getenv("DB_PORT", "3306")),
-    user=os.getenv("DB_USER", "root"),
-    password=os.getenv("DB_PASSWORD", ""),
-    database=os.getenv("DB_NAME", "voucher_db"),
-)
-cur = conn.cursor()
 
-for m in MANAGERS:
-    cur.execute("SELECT id FROM managers WHERE username=%s", (m["username"],))
-    if cur.fetchone():
-        print(f"[skip] manager '{m['username']}' already exists")
-        continue
-    cur.execute(
-        "INSERT INTO managers(username,password_hash,full_name,email) VALUES(%s,%s,%s,%s)",
-        (m["username"], generate_password_hash(m["password"]), m["full_name"], m.get("email") or None),
-    )
-    print(f"[ok] manager '{m['username']}' created")
+def main(path):
+    if not os.path.isfile(path):
+        raise SystemExit(f"No such file: {path}")
 
-for e in EMPLOYEES:
-    cur.execute("SELECT id FROM employees WHERE username=%s", (e["username"],))
-    if cur.fetchone():
-        print(f"[skip] employee '{e['username']}' already exists")
-        continue
-    cur.execute(
-        "INSERT INTO employees(username,password_hash,full_name,department,phone,email) VALUES(%s,%s,%s,%s,%s,%s)",
-        (e["username"], generate_password_hash(e["password"]), e["full_name"],
-         e.get("department") or None, e.get("phone") or None, e.get("email") or None),
-    )
-    print(f"[ok] employee '{e['username']}' created")
+    conn = mysql.connector.connect(
+        host=os.getenv("DB_HOST", "localhost"), port=int(os.getenv("DB_PORT", "3306")),
+        user=os.getenv("DB_USER", "root"), password=os.getenv("DB_PASSWORD", ""),
+        database=os.getenv("DB_NAME", "voucher_db"))
+    cur = conn.cursor()
 
-conn.commit()
-cur.close()
-conn.close()
-print("Done.")
+    created = []
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.DictReader(fh):
+            username = (row.get("username") or "").strip()
+            full_name = (row.get("full_name") or "").strip()
+            if not username or not full_name:
+                print(f"[skip] row missing username or full_name: {row}")
+                continue
+            cur.execute("SELECT id FROM employees WHERE username=%s", (username,))
+            if cur.fetchone():
+                print(f"[skip] '{username}' already exists")
+                continue
+            password = random_password()
+            cur.execute("""INSERT INTO employees(username,password_hash,full_name,department,
+                               phone,email,must_change_password)
+                           VALUES(%s,%s,%s,%s,%s,%s,1)""",
+                        (username, generate_password_hash(password), full_name,
+                         (row.get("department") or "").strip() or None,
+                         (row.get("phone") or "").strip() or None,
+                         (row.get("email") or "").strip() or None))
+            created.append((username, full_name, password))
+            print(f"[ok] '{username}' created")
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    if created:
+        print("\n" + "=" * 64)
+        print("TEMPORARY PASSWORDS - shown once. Hand these over securely,")
+        print("then delete this output. Each user must change it at first login.")
+        print("=" * 64)
+        for username, full_name, password in created:
+            print(f"{username:<20} {full_name:<28} {password}")
+        print("=" * 64)
+    else:
+        print("No new accounts created.")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        raise SystemExit("Usage: python create_credentials.py <employees.csv>")
+    main(sys.argv[1])

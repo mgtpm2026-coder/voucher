@@ -1,113 +1,150 @@
-"""
-Notification helpers — SMS, WhatsApp, and Email.
+"""Notification helpers - SMS, WhatsApp and Email.
 
-These are REAL integrations (Twilio for SMS/WhatsApp, SMTP for Email) but
-they only fire if you provide credentials in your .env file. Without
-credentials, each function safely logs to the console instead of crashing,
-so the app keeps working while you're setting providers up.
+Real integrations (Twilio for SMS/WhatsApp, SMTP for email) that stay quiet
+when unconfigured: every function returns True/False rather than raising, so
+a missing provider never breaks an approval.
+
+Configuration is read at call time, not at import time. The previous version
+read os.getenv() while the module was being imported, which happened before
+app.py called load_dotenv() - so credentials in .env were silently ignored
+and notifications never went out even when fully configured.
 
 Add to your .env (see .env.example):
 
-    # --- SMS / WhatsApp (Twilio) ---
     TWILIO_ACCOUNT_SID=
     TWILIO_AUTH_TOKEN=
-    TWILIO_SMS_FROM=            # e.g. +14155550100  (a Twilio phone number)
-    TWILIO_WHATSAPP_FROM=       # e.g. whatsapp:+14155238886 (Twilio sandbox or approved sender)
+    TWILIO_SMS_FROM=            # e.g. +14155550100
+    TWILIO_WHATSAPP_FROM=       # e.g. +14155238886
 
-    # --- Email (SMTP) ---
     SMTP_HOST=smtp.gmail.com
     SMTP_PORT=587
     SMTP_USER=you@yourcompany.in
     SMTP_PASSWORD=app-password-here
     SMTP_FROM=you@yourcompany.in
 
-Then: pip install twilio   (only needed for SMS/WhatsApp; email uses the
-standard library and needs no extra install.)
+SMS/WhatsApp also needs:  pip install twilio
 """
 
+import logging
 import os
 import smtplib
-from email.mime.text import MIMEText
+from email.message import EmailMessage
 
-TWILIO_SID = os.getenv("TWILIO_ACCOUNT_SID")
-TWILIO_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_SMS_FROM = os.getenv("TWILIO_SMS_FROM")
-TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM")
+_log = logging.getLogger("notifications")
 
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "")
+
+def set_logger(logger):
+    """Point this module at the Flask app logger."""
+    global _log
+    _log = logger
+
+
+def _env(name, default=""):
+    return (os.getenv(name) or default).strip()
 
 
 def _twilio_client():
-    if not (TWILIO_SID and TWILIO_TOKEN):
+    sid, token = _env("TWILIO_ACCOUNT_SID"), _env("TWILIO_AUTH_TOKEN")
+    if not (sid and token):
         return None
     try:
         from twilio.rest import Client
-        return Client(TWILIO_SID, TWILIO_TOKEN)
     except ImportError:
-        print("[notifications] 'twilio' package not installed — run: pip install twilio")
+        _log.warning("twilio package not installed - run: pip install twilio")
+        return None
+    try:
+        return Client(sid, token)
+    except Exception as e:
+        _log.error("Twilio client could not be created: %s", e)
         return None
 
 
+def _normalise(phone):
+    """Twilio needs E.164. A bare 10-digit Indian number gets +91."""
+    p = "".join(ch for ch in str(phone or "") if ch.isdigit() or ch == "+")
+    if not p:
+        return ""
+    if p.startswith("+"):
+        return p
+    if len(p) == 10:
+        return f"{_env('DEFAULT_COUNTRY_CODE', '+91')}{p}"
+    if len(p) > 10 and not p.startswith("+"):
+        return f"+{p}"
+    return p
+
+
 def send_sms(to_phone, message):
+    to_phone = _normalise(to_phone)
     if not to_phone:
         return False
-    client = _twilio_client()
-    if not client or not TWILIO_SMS_FROM:
-        print(f"[SMS not sent — Twilio not configured] to={to_phone}: {message}")
+    client, sender = _twilio_client(), _env("TWILIO_SMS_FROM")
+    if not client or not sender:
+        _log.info("SMS not sent (Twilio not configured) to=%s", to_phone)
         return False
     try:
-        client.messages.create(body=message, from_=TWILIO_SMS_FROM, to=to_phone)
+        client.messages.create(body=message, from_=sender, to=to_phone)
+        _log.info("SMS sent to %s", to_phone)
         return True
     except Exception as e:
-        print(f"[SMS error] {e}")
+        _log.error("SMS failed to %s: %s", to_phone, e)
         return False
 
 
 def send_whatsapp(to_phone, message):
+    to_phone = _normalise(to_phone)
     if not to_phone:
         return False
-    client = _twilio_client()
-    if not client or not TWILIO_WHATSAPP_FROM:
-        print(f"[WhatsApp not sent — Twilio not configured] to={to_phone}: {message}")
+    client, sender = _twilio_client(), _env("TWILIO_WHATSAPP_FROM")
+    if not client or not sender:
+        _log.info("WhatsApp not sent (Twilio not configured) to=%s", to_phone)
         return False
+    if not sender.startswith("whatsapp:"):
+        sender = f"whatsapp:{sender}"
     try:
-        client.messages.create(body=message, from_=TWILIO_WHATSAPP_FROM, to=f"whatsapp:{to_phone}")
+        client.messages.create(body=message, from_=sender, to=f"whatsapp:{to_phone}")
+        _log.info("WhatsApp sent to %s", to_phone)
         return True
     except Exception as e:
-        print(f"[WhatsApp error] {e}")
+        _log.error("WhatsApp failed to %s: %s", to_phone, e)
         return False
 
 
 def send_email(to_email, subject, message):
     if not to_email:
         return False
-    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD):
-        print(f"[Email not sent — SMTP not configured] to={to_email}: {subject}")
+    host, user, password = _env("SMTP_HOST"), _env("SMTP_USER"), _env("SMTP_PASSWORD")
+    if not (host and user and password):
+        _log.info("Email not sent (SMTP not configured) to=%s subject=%s", to_email, subject)
         return False
+    port = int(_env("SMTP_PORT", "587") or 587)
+    sender = _env("SMTP_FROM") or user
     try:
-        msg = MIMEText(message)
+        msg = EmailMessage()
         msg["Subject"] = subject
-        msg["From"] = SMTP_FROM
+        msg["From"] = sender
         msg["To"] = to_email
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_FROM, [to_email], msg.as_string())
+        msg.set_content(message)
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=20) as server:
+                server.login(user, password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=20) as server:
+                server.starttls()
+                server.login(user, password)
+                server.send_message(msg)
+        _log.info("Email sent to %s", to_email)
         return True
     except Exception as e:
-        print(f"[Email error] {e}")
+        _log.error("Email failed to %s: %s", to_email, e)
         return False
 
 
 def notify_employee(employee, subject, message, whatsapp=True, sms=True, email=True):
-    """Send a voucher/payment update to an employee across configured channels.
-    `employee` is a dict-like row with 'email' and 'phone' keys.
-    Never raises — failures are logged, not propagated, so a missing
-    provider never breaks the approve/reject/payment flow."""
+    """Send a voucher or payment update across the configured channels.
+
+    Never raises - a provider outage must not roll back an approval.
+    """
     results = {}
     try:
         if email:
@@ -116,13 +153,19 @@ def notify_employee(employee, subject, message, whatsapp=True, sms=True, email=T
             results["whatsapp"] = send_whatsapp(employee.get("phone"), message)
         if sms and not results.get("whatsapp"):
             results["sms"] = send_sms(employee.get("phone"), message)
-    except Exception as e:
-        print(f"[notify_employee error] {e}")
+    except Exception as e:  # pragma: no cover - defensive
+        _log.error("notify_employee failed: %s", e)
     return results
 
 
 def send_otp(phone, otp_code):
-    """OTP is sent by SMS (falls back to WhatsApp if SMS isn't configured)."""
-    message = f"Your MGT Voucher Portal verification code is {otp_code}. It expires in 10 minutes. Do not share this code."
-    if not send_sms(phone, message):
-        send_whatsapp(phone, message)
+    """Deliver a verification code. Returns True only if something was sent.
+
+    The caller must check this. The previous version always reported success
+    to the user even when no provider was configured and nothing went out.
+    """
+    message = (f"Your MGT Voucher Portal verification code is {otp_code}. "
+               "It expires in 10 minutes. Do not share this code.")
+    if send_sms(phone, message):
+        return True
+    return send_whatsapp(phone, message)

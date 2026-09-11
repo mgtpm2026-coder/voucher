@@ -1,16 +1,17 @@
-# Running the voucher app in VS Code
+# Running the voucher app
 
-Verified working on 11 Sep 2026: Python 3.11 + MariaDB 10.11, full flow from
-employee submission through manager approval, partial payment, PDF, Excel and
-ZIP export.
+Verified on Python 3.11 + MariaDB 10.11: full flow from employee submission
+through manager approval, partial payment, PDF, Excel and ZIP export, with
+30 automated tests passing.
+
+Upgrading an existing v2 install? Read [UPGRADE.md](UPGRADE.md) instead —
+this page assumes a clean database.
 
 ## Use Python 3.11 or 3.12
 
-Not 3.13 or 3.14. `requirements.txt` pins `Pillow>=10,<11` and `pandas>=2.2,<3`,
-and those releases have no wheels for the newer interpreters — `pip install`
-tries to compile from source and fails. The `__pycache__` in the original zip was
-built by Python 3.14, so whoever ran it last hit a different interpreter than the
-pins allow.
+Not 3.13 or 3.14. `requirements.txt` pins `Pillow>=10,<11` and
+`pandas>=2.2,<3`, and those releases have no wheels for the newer
+interpreters, so `pip install` tries to compile from source and fails.
 
 ```
 python --version     # expect 3.11.x or 3.12.x
@@ -18,40 +19,39 @@ python --version     # expect 3.11.x or 3.12.x
 
 ## 1. MySQL must be running
 
-The app needs a reachable MySQL/MariaDB server before it will start — it opens a
-connection on the first page load, not lazily. Start the service (XAMPP, MySQL
-Workbench's server, or `net start MySQL80` on Windows) and confirm you can log in.
+Start MySQL or MariaDB and confirm you can log in before going further.
 
 ## 2. Create the database
-
-Run `schema_fresh.sql` once. It creates `voucher_db` and five tables.
 
 ```
 mysql -u root -p < schema_fresh.sql
 ```
 
-**This script drops `managers`, `employees`, `vouchers`, `payments` and
-`otp_codes` first.** On an existing install run `migration_v2.sql` instead — that
-one only adds columns.
+**This drops the application tables first.** Only for a new install.
+
+Then create a limited user for the app to run as — it does not need root:
+
+```
+mysql -u root -p < deploy/mysql_user.sql    # edit the password inside first
+```
 
 ## 3. Create `.env`
 
-Copy `.env.example` to `.env` and fill in your MySQL credentials. `.env` is
-gitignored and must never be committed.
-
-Generate a real secret key rather than leaving the placeholder — the default in
-`app.py` is a published constant, and anyone who knows it can forge a manager
-session:
-
 ```
+cp .env.example .env
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Paste the output as `SECRET_KEY`.
+Paste that value as `SECRET_KEY` and fill in your database credentials. The
+app **refuses to start** without a real key rather than falling back to a
+published constant.
+
+For local development over plain HTTP, also set `COOKIE_SECURE=0`. Leave it
+at `1` in production.
+
+`.env` is gitignored. Never commit it.
 
 ## 4. Virtual environment and dependencies
-
-In the VS Code terminal, from the project folder:
 
 ```
 python -m venv .venv
@@ -60,8 +60,8 @@ source .venv/bin/activate       # macOS / Linux
 pip install -r requirements.txt
 ```
 
-VS Code should detect `.venv` automatically. If it doesn't, press `Ctrl+Shift+P`
-→ *Python: Select Interpreter* → pick the one inside `.venv`.
+In VS Code, press `Ctrl+Shift+P` → *Python: Select Interpreter* → the one
+inside `.venv` if it is not picked up automatically.
 
 ## 5. Create the first manager
 
@@ -69,35 +69,72 @@ VS Code should detect `.venv` automatically. If it doesn't, press `Ctrl+Shift+P`
 python init_manager.py
 ```
 
-It prompts for a username and password and does nothing if a manager already
-exists. There is a *Create first manager account* entry in the Run panel that
-does the same thing under the debugger.
+It prompts for username, password, full name and a mobile number. Give it a
+real mobile — it is where verification codes go, and manager OTP does not
+work without one.
 
-Do not use `create_credentials.py` as-is — it has a hardcoded `ChangeMe@123` for
-both accounts.
+To add employees in bulk from a CSV, see `create_credentials.py`. It
+generates a strong random password per account, prints them once, and flags
+each account so the holder must change it at first login.
 
 ## 6. Run it
 
-Press **F5** and pick a configuration:
+In VS Code press **F5** and pick a configuration:
 
 | Configuration | What it does |
 |---|---|
-| **Voucher app** | Runs `app.py` directly, breakpoints active. Matches how the app runs today. |
-| **Voucher app (auto-reload)** | `flask run` — restarts on file save. Use this while editing templates. |
+| **Voucher app** | Runs `app.py` directly, breakpoints active |
+| **Voucher app (auto-reload)** | `flask run`, restarts on save |
+| **Create first manager account** | `init_manager.py` under the debugger |
 
-Then open <http://127.0.0.1:5000>.
+Or from a terminal:
 
-Breakpoints work in both `.py` files and Jinja templates (`"jinja": true` is set
-in `launch.json`).
+```
+python app.py
+```
 
-## Notes while you are working in it
+Then open <http://127.0.0.1:5000>. It binds to `127.0.0.1`, not all
+interfaces — set `BIND_HOST` if you need otherwise during development.
 
-- **Uploaded bills cannot be opened from the UI.** Nothing serves the `uploads/`
-  folder, so a manager approving a claim cannot see the receipt. To view one
-  during development, open the file directly from `uploads/Employees/...` on
-  disk.
-- **`uploads/` is gitignored.** Receipts are employee data. The original zip had
-  a real bill committed under `uploads/Employees/Pratham_P_M/` — it was not
-  carried into this repository.
-- **The dev server is single-threaded.** It will feel fine for one person and
-  serialise badly with several. That is expected; it is not for production use.
+## 7. Run the tests
+
+```
+pip install pytest
+set TEST_DB_NAME=voucher_test        # Windows
+export TEST_DB_NAME=voucher_test     # macOS / Linux
+pytest tests/ -v
+```
+
+`tests/test_workflow.py` drops and recreates the database named by
+`TEST_DB_NAME`. Never point it at `voucher_db`.
+
+## Production
+
+Do not use `python app.py` in production — it is single-threaded and
+unencrypted. `deploy/` has working samples:
+
+| File | Purpose |
+|---|---|
+| `gunicorn.conf.py` | WSGI server config |
+| `voucher.service` | systemd unit, restarts on boot and on crash |
+| `nginx.conf.sample` | TLS termination and reverse proxy |
+| `backup.sh` | Nightly database + uploads backup |
+| `mysql_user.sql` | Least-privilege database user |
+
+```
+gunicorn -c deploy/gunicorn.conf.py app:app
+```
+
+Set up `deploy/backup.sh` on the first day. The bills in `uploads/` are the
+documents you will need years later at tax assessment, and they exist in
+exactly one place.
+
+## Notes
+
+- **Offline-friendly.** Bootstrap and the icon font are vendored into
+  `static/vendor/`, so the app renders correctly on a LAN with no internet
+  and does not break if a firewall blocks jsDelivr.
+- **`uploads/` and `logs/` are gitignored.** Bills are employee data and do
+  not belong in version control.
+- **Health check** at `/healthz` returns 200 when the database is reachable,
+  503 when it is not. Useful for a monitor or load balancer.

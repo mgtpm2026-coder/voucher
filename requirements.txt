@@ -1,4 +1,6 @@
+# Python 3.11 or 3.12. Pillow/pandas below have no wheels for 3.13+.
 Flask>=3.0,<4
+Flask-WTF>=1.2,<2          # CSRF protection
 mysql-connector-python>=9.0,<10
 python-dotenv>=1.0,<2
 Werkzeug>=3.0,<4
@@ -6,5 +8,12 @@ pandas>=2.2,<3
 openpyxl>=3.1,<4
 reportlab>=4.0,<5
 Pillow>=10.0,<11
-# Optional — only needed if you enable SMS/WhatsApp OTP & notifications:
+gunicorn>=22,<24           # production WSGI server (Linux); use waitress on Windows
+
+# Optional - only needed if you enable SMS/WhatsApp OTP & notifications:
 # twilio>=9.0,<10
+# Windows production server instead of gunicorn:
+# waitress>=3.0,<4
+
+# Development only:
+# pytest>=8.0

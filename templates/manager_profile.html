@@ -5,12 +5,14 @@
 <div class="row g-4">
   <div class="col-lg-4">
     <div class="section-card text-center">
-      {% if user.profile_image %}<img src="{{url_for('static',filename=user.profile_image)}}" class="rounded-circle mb-3" style="width:120px;height:120px;object-fit:cover;">
+      {% if user.profile_image %}<img src="{{url_for('profile_photo_file', user_type='manager', user_id=user.id)}}" class="rounded-circle mb-3" style="width:120px;height:120px;object-fit:cover;" alt="">
       {% else %}<div class="avatar-badge mx-auto mb-3" style="width:120px;height:120px;font-size:2.4rem;">{{user.full_name[:1]|upper}}</div>{% endif %}
       <h5 class="fw-bold mb-0">{{user.full_name}}</h5>
-      <div class="text-secondary small mb-3">Manager</div>
+      <div class="text-secondary small mb-3">{{ user.department or 'Role' if 'manager'=='employee' else 'Manager' }}</div>
       <form method="post" action="{{url_for('profile_photo')}}" enctype="multipart/form-data">
-        <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm mb-2" required>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="form-label visually-hidden" for="photo">Profile photo</label>
+        <input id="photo" type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm mb-2" required>
         <button class="btn btn-brand btn-sm w-100"><i class="bi bi-upload"></i> Upload Photo</button>
       </form>
     </div>
@@ -20,32 +22,38 @@
     <div class="section-card mb-4">
       <h5 class="form-section-title"><i class="bi bi-person-badge me-2"></i>Account Details</h5>
       <div class="row g-3">
-        <div class="col-md-6"><label class="form-label">Full Name</label><input class="form-control" value="{{user.full_name}}" disabled></div>
-        <div class="col-md-6"><label class="form-label">Username</label><input class="form-control" value="{{user.username}}" disabled></div>
+        <div class="col-md-6"><label class="form-label" for="p-name">Full Name</label><input id="p-name" class="form-control" value="{{user.full_name}}" disabled></div>
+        <div class="col-md-6"><label class="form-label" for="p-user">Username</label><input id="p-user" class="form-control" value="{{user.username}}" disabled></div>
+        {% if 'manager'=='employee' %}<div class="col-md-6"><label class="form-label" for="p-dept">Department</label><input id="p-dept" class="form-control" value="{{user.department or '-'}}" disabled></div>{% endif %}
       </div>
-      <div class="form-text mt-2"><i class="bi bi-lock"></i> Name and username are fixed. Email and password below can be changed by you, with OTP verification sent to your registered mobile.</div>
+      <div class="form-text mt-2"><i class="bi bi-lock"></i> These fields are managed by your administrator. Contact details and password below can be changed by you, with OTP verification.</div>
     </div>
 
     <div class="section-card mb-4">
       <h5 class="form-section-title"><i class="bi bi-envelope me-2"></i>Contact Information</h5>
       <div class="row g-3 mb-3">
-        <div class="col-md-6"><label class="form-label">Current Email</label><input class="form-control" value="{{user.email or '-'}}" disabled></div>
-        <div class="col-md-6"><label class="form-label">Current Mobile</label><input class="form-control" value="{{user.phone or '-'}}" disabled></div>
+        <div class="col-md-6"><label class="form-label" for="p-email">Current Email</label><input id="p-email" class="form-control" value="{{user.email or '-'}}" disabled></div>
+        <div class="col-md-6"><label class="form-label" for="p-phone">Current Mobile</label><input id="p-phone" class="form-control" value="{{user.phone or '-'}}" disabled></div>
       </div>
+      {% if not user.phone %}
+      <div class="balance-note mb-3"><i class="bi bi-exclamation-triangle me-1"></i>No mobile number is on file, so verification codes cannot be sent. Ask your administrator to add one.</div>
+      {% endif %}
       {% if request.args.get('verify')=='profile_update' %}
       <form method="post" action="{{url_for('profile_verify_otp')}}" class="balance-note">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="purpose" value="profile_update">
-        <label class="form-label">Enter the OTP sent to your registered mobile</label>
-        <div class="d-flex gap-2"><input name="otp" class="form-control" maxlength="6" required><button class="btn btn-brand"><i class="bi bi-check2"></i> Verify &amp; Update</button></div>
+        <label class="form-label" for="otp-c">Enter the code sent to your registered mobile</label>
+        <div class="d-flex gap-2"><input id="otp-c" name="otp" class="form-control" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required><button class="btn btn-brand"><i class="bi bi-check2"></i> Verify &amp; Update</button></div>
       </form>
       {% else %}
       <form method="post" action="{{url_for('profile_request_otp')}}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="purpose" value="profile_update">
         <div class="row g-3">
-          <div class="col-md-6"><label class="form-label">New Email</label><input name="new_email" type="email" class="form-control" placeholder="name@company.in"></div>
-          <div class="col-md-6"><label class="form-label">New Mobile</label><input name="new_phone" class="form-control" placeholder="10-digit number"></div>
+          <div class="col-md-6"><label class="form-label" for="ne">New Email</label><input id="ne" name="new_email" type="email" class="form-control" placeholder="name@company.in" maxlength="150"></div>
+          <div class="col-md-6"><label class="form-label" for="np">New Mobile</label><input id="np" name="new_phone" class="form-control" placeholder="10-digit number" maxlength="30"></div>
         </div>
-        <button class="btn btn-brand-outline mt-3"><i class="bi bi-send"></i> Send OTP to Update</button>
+        <button class="btn btn-brand-outline mt-3" {% if not user.phone %}disabled{% endif %}><i class="bi bi-send"></i> Send Code to Update</button>
       </form>
       {% endif %}
     </div>
@@ -54,15 +62,18 @@
       <h5 class="form-section-title"><i class="bi bi-shield-lock me-2"></i>Reset Password</h5>
       {% if request.args.get('verify')=='password_reset' %}
       <form method="post" action="{{url_for('profile_verify_otp')}}" class="balance-note">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="purpose" value="password_reset">
-        <label class="form-label">Enter the OTP sent to your registered mobile</label>
-        <div class="d-flex gap-2"><input name="otp" class="form-control" maxlength="6" required><button class="btn btn-brand"><i class="bi bi-check2"></i> Verify &amp; Reset</button></div>
+        <label class="form-label" for="otp-p">Enter the code sent to your registered mobile</label>
+        <div class="d-flex gap-2"><input id="otp-p" name="otp" class="form-control" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required><button class="btn btn-brand"><i class="bi bi-check2"></i> Verify &amp; Reset</button></div>
       </form>
       {% else %}
       <form method="post" action="{{url_for('profile_request_otp')}}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="purpose" value="password_reset">
-        <label class="form-label">New Password</label>
-        <div class="d-flex gap-2"><input name="new_password" type="password" class="form-control" minlength="6" required placeholder="At least 6 characters"><button class="btn btn-brand-outline"><i class="bi bi-send"></i> Send OTP</button></div>
+        <label class="form-label" for="npw">New Password</label>
+        <div class="d-flex gap-2"><input id="npw" name="new_password" type="password" class="form-control" minlength="{{ min_length }}" required placeholder="At least {{ min_length }} characters" autocomplete="new-password"><button class="btn btn-brand-outline" {% if not user.phone %}disabled{% endif %}><i class="bi bi-send"></i> Send Code</button></div>
+      <div class="form-text mt-2">Prefer not to use OTP? <a href="{{url_for('change_password')}}">Change it with your current password instead.</a></div>
       </form>
       {% endif %}
     </div>

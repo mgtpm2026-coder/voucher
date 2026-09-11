@@ -6,10 +6,11 @@
     <h2>Welcome back</h2>
     <p class="sub">Sign in with your employee or manager account.</p>
     <form method="post">
-      <label class="form-label">Username</label>
-      <div class="input-icon mb-3"><i class="bi bi-person"></i><input name="username" class="form-control form-control-lg" required autofocus placeholder="Enter your username"></div>
-      <label class="form-label">Password</label>
-      <div class="input-icon mb-4"><i class="bi bi-lock"></i><input type="password" name="password" class="form-control form-control-lg" required placeholder="Enter your password"></div>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="form-label" for="username">Username</label>
+      <div class="input-icon mb-3"><i class="bi bi-person"></i><input id="username" name="username" class="form-control form-control-lg" required autofocus autocomplete="username" placeholder="Enter your username"></div>
+      <label class="form-label" for="password">Password</label>
+      <div class="input-icon mb-4"><i class="bi bi-lock"></i><input id="password" type="password" name="password" class="form-control form-control-lg" required autocomplete="current-password" placeholder="Enter your password"></div>
       <button class="btn btn-brand btn-lg w-100"><i class="bi bi-box-arrow-in-right me-1"></i>Sign In</button>
     </form>
   </div>
