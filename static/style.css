@@ -1,0 +1,209 @@
+/* ==========================================================================
+   MGT Voucher Management — Design System
+   Brand colors sampled from MGT logo: navy #2B4D7E / green #2EAE62
+   ========================================================================== */
+
+:root{
+  --navy:#2b4d7e;
+  --navy-dark:#1e3a63;
+  --navy-darker:#152a49;
+  --navy-light:#eaf0f8;
+  --navy-tint:#f2f6fb;
+  --green:#2eae62;
+  --green-dark:#229150;
+  --green-light:#e7f7ee;
+  --ink:#16212e;
+  --muted:#6b7686;
+  --muted-soft:#95a0af;
+  --line:#e7eaf1;
+  --soft:#f6f8fb;
+  --danger:#d64545;
+  --danger-light:#fbe9e9;
+  --warning:#b8860b;
+  --warning-light:#fdf3d8;
+  --radius-lg:18px;
+  --radius-md:14px;
+  --radius-sm:10px;
+  --shadow-xs:0 1px 3px rgba(21,32,49,.05);
+  --shadow-sm:0 4px 16px rgba(21,32,49,.06);
+  --shadow-md:0 12px 32px rgba(21,32,49,.10);
+  --shadow-lg:0 24px 60px rgba(21,32,49,.16);
+}
+
+*{box-sizing:border-box}
+
+body{
+  background:var(--soft);
+  color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+h1,h2,h3,h4,h5,h6{letter-spacing:-.02em}
+
+a{color:var(--navy)}
+a:hover{color:var(--navy-dark)}
+
+/* ---------- Brand top accent ---------- */
+.brand-strip{height:4px;width:100%;background:linear-gradient(90deg,var(--navy) 0%,var(--navy) 45%,var(--green) 100%);position:sticky;top:0;z-index:1041}
+
+/* ---------- Navbar ---------- */
+.app-navbar{background:#fff;border-bottom:1px solid var(--line);box-shadow:var(--shadow-xs)}
+.app-navbar .container{padding-top:.55rem;padding-bottom:.55rem}
+.brand-logo{height:76px;width:auto;display:block}
+.navbar-brand{display:flex;align-items:center;gap:.6rem;padding:0}
+.app-navbar .container{padding-top:.5rem;padding-bottom:.5rem;min-height:88px}
+.nav-pills-custom{display:flex;gap:.25rem;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:4px}
+.nav-pills-custom a{
+  padding:.42rem 1rem;border-radius:999px;font-size:.88rem;font-weight:600;color:var(--muted);
+  text-decoration:none;transition:all .15s ease;white-space:nowrap;
+}
+.nav-pills-custom a:hover{color:var(--navy)}
+.nav-pills-custom a.active{background:var(--navy);color:#fff;box-shadow:var(--shadow-xs)}
+.user-chip{display:flex;align-items:center;gap:.6rem;padding-left:.9rem;border-left:1px solid var(--line);cursor:pointer}
+.avatar-badge{
+  width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--green));
+  color:#fff;display:grid;place-items:center;font-weight:700;font-size:.85rem;flex-shrink:0;
+}
+.avatar-img{object-fit:cover;background:#fff}
+.dropdown-toggle-noarrow::after{display:none}
+.user-meta{line-height:1.15}
+.user-meta .u-name{font-weight:700;font-size:.86rem;color:var(--ink)}
+.user-meta .u-role{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+/* ---------- Layout ---------- */
+main.container{max-width:1180px}
+.page-head{margin-bottom:24px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:14px}
+.page-head h2{font-weight:800;margin-bottom:2px}
+.page-head .text-secondary{color:var(--muted)!important}
+.back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-weight:600;font-size:.9rem}
+.back-link:hover{color:var(--navy)}
+
+/* ---------- Buttons ---------- */
+.btn{border-radius:11px;font-weight:600;font-size:.9rem;padding:.55rem 1.1rem;transition:all .15s ease}
+.btn-sm{padding:.35rem .75rem;border-radius:9px;font-size:.82rem}
+.btn-lg{padding:.75rem 1.2rem;border-radius:13px}
+.btn-brand{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn-brand:hover{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff;transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.btn-brand-outline{background:#fff;border:1.5px solid var(--navy);color:var(--navy)}
+.btn-brand-outline:hover{background:var(--navy-light);color:var(--navy-dark);border-color:var(--navy)}
+.btn-accent{background:var(--green);border-color:var(--green);color:#fff}
+.btn-accent:hover{background:var(--green-dark);border-color:var(--green-dark);color:#fff;transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.btn-ghost:hover{background:var(--soft);color:var(--ink)}
+.btn-outline-secondary,.btn-outline-dark{border-radius:11px}
+
+/* ---------- Cards ---------- */
+.card{border:1px solid var(--line)!important;border-radius:var(--radius-lg)!important;box-shadow:none}
+.surface-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
+
+/* ---------- Stat cards ---------- */
+.stat-card{
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:20px 22px;height:100%;box-shadow:var(--shadow-xs);position:relative;overflow:hidden;
+  transition:box-shadow .15s ease, transform .15s ease;
+}
+.stat-card:hover{box-shadow:var(--shadow-sm);transform:translateY(-2px)}
+.stat-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,var(--navy))}
+.stat-card .icon-chip{
+  width:38px;height:38px;border-radius:11px;display:grid;place-items:center;margin-bottom:12px;
+  background:var(--accent-light,var(--navy-light));color:var(--accent,var(--navy));font-size:1.05rem;
+}
+.stat-card .label{color:var(--muted);font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.stat-card .value{font-size:1.6rem;font-weight:800;margin-top:4px;color:var(--ink)}
+.stat-card.acc-navy{--accent:var(--navy);--accent-light:var(--navy-light)}
+.stat-card.acc-green{--accent:var(--green);--accent-light:var(--green-light)}
+.stat-card.acc-warning{--accent:var(--warning);--accent-light:var(--warning-light)}
+.stat-card.acc-danger{--accent:var(--danger);--accent-light:var(--danger-light)}
+
+/* ---------- Month / section cards ---------- */
+.month-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow-xs)}
+.month-card .month-title{display:flex;align-items:center;gap:10px}
+.month-card .month-title h5{margin:0;font-weight:800}
+.month-summary{font-size:.82rem;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.month-summary b{color:var(--ink)}
+
+/* ---------- Tables ---------- */
+.table{margin-bottom:0}
+.table thead th{
+  font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+  background:var(--soft);border-bottom:1px solid var(--line);font-weight:700;padding:.85rem 1rem;
+}
+.table tbody td{padding:.85rem 1rem;vertical-align:middle;border-bottom:1px solid var(--line);font-size:.92rem}
+.table tbody tr:last-child td{border-bottom:none}
+.table-hover tbody tr:hover{background:var(--navy-tint)}
+.table-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-xs)}
+
+/* ---------- Badges / status ---------- */
+.badge{font-weight:700;font-size:.72rem;padding:.42em .7em;border-radius:8px;letter-spacing:.01em}
+.status-not-paid{background:var(--danger-light);color:#a02c2c}
+.status-partially-paid{background:var(--warning-light);color:#8a6a09}
+.status-fully-paid{background:var(--green-light);color:var(--green-dark)}
+.approval-pending{background:var(--warning-light);color:#8a6a09}
+.approval-approved{background:var(--green-light);color:var(--green-dark)}
+.approval-rejected{background:var(--danger-light);color:#a02c2c}
+
+/* ---------- Empty state ---------- */
+.empty{padding:70px 30px;text-align:center;background:#fff;border:1.5px dashed #d6dce6;border-radius:var(--radius-lg);color:var(--muted)}
+.empty .empty-icon{font-size:2.2rem;margin-bottom:10px;opacity:.5}
+.empty .empty-title{font-weight:700;color:var(--ink);margin-bottom:4px}
+
+/* ---------- Forms ---------- */
+.form-label{font-weight:600;font-size:.85rem;color:var(--ink);margin-bottom:.35rem}
+.form-control,.form-select{
+  border:1.5px solid var(--line);border-radius:11px;padding:.6rem .85rem;font-size:.92rem;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.form-control:focus,.form-select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(43,77,126,.12)}
+.form-control-lg{padding:.75rem 1rem;border-radius:12px}
+.filter-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-xs)}
+.section-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px;box-shadow:var(--shadow-sm)}
+.section-card h5.form-section-title{font-weight:800;font-size:.95rem;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+
+/* ---------- Login page (simple, centered card on a soft brand background) ---------- */
+.login-shell{
+  min-height:calc(100vh - 4px);display:flex;align-items:center;justify-content:center;padding:24px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(43,77,126,.10), transparent 42%),
+    radial-gradient(circle at 88% 15%, rgba(46,174,98,.12), transparent 40%),
+    radial-gradient(circle at 20% 90%, rgba(46,174,98,.08), transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(43,77,126,.08), transparent 42%),
+    var(--soft);
+}
+.login-card{
+  width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:24px;
+  box-shadow:var(--shadow-lg);padding:44px 40px;text-align:center;
+}
+.login-card .login-logo{height:72px;width:auto;margin:0 auto 20px;display:block}
+.login-card h2{font-weight:800;margin-bottom:6px}
+.login-card p.sub{color:var(--muted);margin-bottom:28px;font-size:.92rem}
+.login-card form{text-align:left}
+.input-icon{position:relative}
+.input-icon i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted-soft)}
+.input-icon .form-control{padding-left:40px}
+
+@media(max-width:480px){
+  .login-card{padding:32px 24px}
+}
+
+/* ---------- Toasts ---------- */
+.toast-wrap{position:fixed;right:20px;top:64px;z-index:1080;width:min(420px,calc(100% - 40px))}
+.alert{border-radius:12px;border:1px solid transparent;box-shadow:var(--shadow-sm);font-size:.9rem}
+
+/* ---------- Misc ---------- */
+.actions{min-width:230px;display:flex;flex-wrap:wrap;gap:6px}
+.footer-note{color:var(--muted-soft);font-size:.78rem;text-align:center;padding:26px 0 10px}
+.modal-content{border-radius:var(--radius-lg);border:none;box-shadow:var(--shadow-lg)}
+.modal-header{border-bottom:1px solid var(--line);padding:1.1rem 1.4rem}
+.modal-header h5{font-weight:800;font-size:1.05rem}
+.modal-body{padding:1.4rem}
+.modal-footer{border-top:1px solid var(--line);padding:1rem 1.4rem}
+.balance-note{background:var(--navy-tint);border:1px solid var(--navy-light);border-radius:10px;padding:.7rem 1rem;font-size:.88rem;color:var(--navy-dark)}
+
+@media(max-width:700px){
+  .login-card{padding:0}
+  .actions{min-width:170px}
+  .app-navbar .user-meta{display:none}
+  .stat-card .value{font-size:1.35rem}
+  .section-card{padding:20px}
+}

@@ -1,0 +1,26 @@
+# Local environment — never commit real credentials
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Uploaded bills and payment proofs are employee data — keep them out of git
+uploads/
+static/uploads/
+
+# Generated exports
+*.xlsx
+*.zip
+
+# Editor / OS
+.vscode/*
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

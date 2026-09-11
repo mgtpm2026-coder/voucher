@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Voucher app",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
+      "jinja": true,
+      "justMyCode": false
+    },
+    {
+      "name": "Voucher app (auto-reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "flask",
+      "args": ["run", "--host", "127.0.0.1", "--port", "5000", "--no-debugger"],
+      "env": { "FLASK_APP": "app.py" },
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal",
+      "jinja": true,
+      "justMyCode": false
+    },
+    {
+      "name": "Create first manager account",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/init_manager.py",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

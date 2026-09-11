@@ -1,0 +1,7 @@
+{
+  "python.analysis.extraPaths": ["${workspaceFolder}"],
+  "python.terminal.activateEnvironment": true,
+  "files.exclude": { "**/__pycache__": true },
+  "emmet.includeLanguages": { "jinja-html": "html" },
+  "files.associations": { "templates/*.html": "jinja-html" }
+}
